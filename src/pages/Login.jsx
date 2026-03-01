@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Leaf, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Leaf, Mail, Lock, Eye, EyeOff, Info } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Derived state dari router location (Menghindar dari useEffect setter)
+  const showInactivateWarning = Boolean(location.state?.registered);
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -37,6 +42,16 @@ export default function Login() {
           <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-2">Masuk ke Syariah<span className="text-primary">fin</span>.</h1>
           <p className="text-slate-500 text-sm">Masuk untuk mengelola keuangan dan nasabah Anda.</p>
         </div>
+
+        {showInactivateWarning && (
+          <div className="bg-blue-50 text-blue-800 p-4 rounded-2xl flex items-start text-sm border border-blue-100 mb-6 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <Info className="w-5 h-5 mr-3 shrink-0 text-blue-600 mt-0.5" />
+            <div>
+              <p className="font-semibold mb-1">Akun Anda masih belum aktif</p>
+              <p>Proses registrasi berhasil. Silakan tunggu Administrator untuk memverifikasi dan mengaktifkan akun Nasabah Anda sebelum dapat melakukan login.</p>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white py-8 px-6 md:px-8 shadow-xl shadow-slate-200/50 rounded-3xl border border-slate-100">
           <form onSubmit={handleLogin} className="space-y-5">

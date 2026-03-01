@@ -1,38 +1,49 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Leaf, Mail, Lock, Eye, EyeOff, User, ShieldCheck } from 'lucide-react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs) {
-  return twMerge(clsx(inputs));
-}
+import { Leaf, Mail, Lock, Eye, EyeOff, User, MapPin, CalendarDays, Phone, Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     namaLengkap: '',
-    role: 'nasabah', // admin, nasabah
+    tempatTanggalLahir: '',
+    alamat: '',
+    noWhatsapp: '',
     email: '',
     password: '',
     konfirmasiPassword: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    // Di tahap 5 ini akan diganti dengan Firebase Auth
     if (formData.password !== formData.konfirmasiPassword) {
       alert('Password tidak cocok!');
       return;
     }
     
-    // Mock registrasi sukses: Kembali ke login
-    navigate('/login');
+    setIsSubmitting(true);
+    
+    // Simulasi proses registrasi ke Firebase (Mock)
+    // Di sini nantinya Role akan otomatis di-set sebagai "nasabah" 
+    // dan status "is_active" akan bernilai false
+    
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulasi loading
+    
+    setIsSubmitting(false);
+    setShowSuccessMessage(true);
+    
+    // Tahan sebentar untuk menampilkan pesan sukses, lalu arahkan ke Login
+    setTimeout(() => {
+      // Kita passing state melalui navigate untuk ditangkap di halaman login
+      navigate('/login', { state: { registered: true } });
+    }, 4000);
   };
 
   return (
@@ -72,36 +83,60 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Role Assignment */}
+            {/* Tempat Tanggal Lahir */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Pilih Role Akun</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFormData({...formData, role: 'nasabah'})}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 rounded-xl border text-sm transition-all text-center",
-                    formData.role === 'nasabah' 
-                      ? "border-primary bg-emerald-50 text-emerald-800 font-semibold ring-1 ring-primary/20" 
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  <User className={cn("w-5 h-5 mb-2", formData.role === 'nasabah' ? "text-primary" : "text-slate-400")} />
-                  Nasabah
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({...formData, role: 'admin'})}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-3 rounded-xl border text-sm transition-all text-center",
-                    formData.role === 'admin' 
-                      ? "border-primary bg-emerald-50 text-emerald-800 font-semibold ring-1 ring-primary/20" 
-                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  <ShieldCheck className={cn("w-5 h-5 mb-2", formData.role === 'admin' ? "text-primary" : "text-slate-400")} />
-                  Admin
-                </button>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Tempat, Tanggal Lahir</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <CalendarDays className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  name="tempatTanggalLahir"
+                  required
+                  value={formData.tempatTanggalLahir}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-colors bg-slate-50/50 focus:bg-white"
+                  placeholder="Misal: Jakarta, 17 Agustus 1990"
+                />
+              </div>
+            </div>
+
+            {/* Alamat */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Alamat Lengkap (Sesuai KTP)</label>
+              <div className="relative">
+                <div className="absolute top-3 left-3 flex items-start pointer-events-none">
+                  <MapPin className="h-5 w-5 text-slate-400" />
+                </div>
+                <textarea
+                  name="alamat"
+                  required
+                  rows="2"
+                  value={formData.alamat}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-colors bg-slate-50/50 focus:bg-white resize-none"
+                  placeholder="Masukkan alamat lengkap..."
+                />
+              </div>
+            </div>
+
+            {/* No WhatsApp */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">No. WhatsApp</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="tel"
+                  name="noWhatsapp"
+                  required
+                  value={formData.noWhatsapp}
+                  onChange={handleInputChange}
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-colors bg-slate-50/50 focus:bg-white"
+                  placeholder="081234567890"
+                />
               </div>
             </div>
 
@@ -175,11 +210,26 @@ export default function Register() {
               </button>
             </div>
 
+            {showSuccessMessage && (
+               <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl flex items-start text-sm border border-emerald-100 mt-2 mb-4 animate-in fade-in slide-in-from-bottom-2">
+                 <CheckCircle2 className="w-5 h-5 mr-2 shrink-0 text-emerald-600 mt-0.5" />
+                 <div>
+                   <p className="font-semibold mb-1">Pendaftaran Berhasil!</p>
+                   <p>Sistem mendaftarkan Anda sebagai <b>Nasabah</b>. Mohon tunggu aktivasi akun dari Admin sebelum Anda dapat masuk.</p>
+                 </div>
+               </div>
+            )}
+
             <button
               type="submit"
-              className="w-full flex justify-center py-3 mt-8 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 text-sm font-bold text-white bg-primary hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98]"
+              disabled={isSubmitting || showSuccessMessage}
+              className="w-full flex justify-center items-center py-3 mt-8 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 text-sm font-bold text-white bg-primary hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Daftar Sekarang
+              {isSubmitting ? (
+                <><Loader2 className="w-5 h-5 animate-spin mr-2"/> Memproses Data...</>
+              ) : (
+                "Daftar Sekarang"
+              )}
             </button>
             
           </form>
