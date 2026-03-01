@@ -1,0 +1,233 @@
+import { useState } from 'react';
+import { Calculator, Package, Wallet, Info } from 'lucide-react';
+const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
+
+export default function SimulasiPembiayaan() {
+  const [formData, setFormData] = useState({
+    namaBarang: '',
+    hargaBarang: '',
+    uangMuka: '',
+    margin: 10,
+    tenor: 12,
+  });
+
+  // Format angka ke format Rupiah
+  const formatRupiah = (number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(number);
+  };
+
+  // Kalkulasi langsung dari state form (Derived State)
+  const harga = parseInt(formData.hargaBarang.replace(/[^0-9]/g, '')) || 0;
+  const dp = parseInt(formData.uangMuka.replace(/[^0-9]/g, '')) || 0;
+  
+  let pokokPembiayaan = 0;
+  let totalMargin = 0;
+  let totalPembiayaan = 0;
+  let cicilanPerBulan = 0;
+
+  if (harga > 0 && harga > dp) {
+    pokokPembiayaan = harga - dp;
+    const marginRate = formData.margin / 100;
+    totalMargin = pokokPembiayaan * marginRate * (formData.tenor / 12); 
+    totalPembiayaan = pokokPembiayaan + totalMargin;
+    cicilanPerBulan = totalPembiayaan / formData.tenor;
+  }
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Format khusus nilai uang
+    if (name === 'hargaBarang' || name === 'uangMuka') {
+      const numericValue = value.replace(/[^0-9]/g, '');
+      setFormData({
+        ...formData,
+        [name]: numericValue ? parseInt(numericValue).toLocaleString('id-ID') : '',
+      });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col max-w-5xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Simulasi Pembiayaan (Murabahah)</h1>
+          <p className="text-slate-500 text-sm mt-1">Kalkulator estimasi margin dan cicilan per bulan secara transparan.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Form Input Container */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-5 pb-3 border-b border-slate-100 flex items-center">
+            <Calculator className="w-5 h-5 text-primary mr-2" />
+            Detail Permohonan
+          </h2>
+
+          <div className="space-y-5">
+            {/* Nama/Jenis Barang */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Nama Barang / Keperluan</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Package className="w-5 h-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  name="namaBarang"
+                  value={formData.namaBarang}
+                  onChange={handleInputChange}
+                  placeholder="Contoh: Paket Umroh, Modal Usaha, Renovasi Rumah..."
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-shadow"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Harga Barang */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Harga Barang (Rp)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-slate-500 sm:text-sm">Rp</span>
+                  </div>
+                  <input
+                    type="text"
+                    name="hargaBarang"
+                    value={formData.hargaBarang}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-shadow"
+                  />
+                </div>
+              </div>
+
+              {/* Uang Muka (DP) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Uang Muka / DP (Rp)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-slate-500 sm:text-sm">Rp</span>
+                  </div>
+                  <input
+                    type="text"
+                    name="uangMuka"
+                    value={formData.uangMuka}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 transition-shadow"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Tenor */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Tenor (Bulan)</label>
+                <select
+                  name="tenor"
+                  value={formData.tenor}
+                  onChange={handleInputChange}
+                  className="block w-full pl-3 pr-10 py-2.5 border border-slate-300 rounded-xl focus:ring-primary focus:border-primary text-sm sm:text-base text-slate-900 bg-white"
+                >
+                  {TENOR_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{t} Bulan</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Margin */}
+              <div>
+                <label className="flex text-sm font-medium text-slate-700 mb-2 justify-between">
+                  <span>Margin (% per tahun)</span>
+                  <span className="text-primary font-semibold">{formData.margin}%</span>
+                </label>
+                <div className="flex items-center space-x-4 h-11">
+                  <input
+                    type="range"
+                    name="margin"
+                    min="5"
+                    max="30"
+                    step="0.5"
+                    value={formData.margin}
+                    onChange={handleInputChange}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-xl flex items-start text-sm border border-blue-100">
+              <Info className="w-5 h-5 mr-2 shrink-0 text-blue-500 mt-0.5" />
+              <p>Simulasi menggunakan skema <span className="font-semibold">Murabahah</span> (Jual Beli). Margin keuntungan (Flat) disepakati di awal dan tidak akan berubah hingga tenor selesai (Non-Floating).</p>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Kalkulasi Ringkasan Container */}
+        <div className="lg:col-span-5 relative">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-xl overflow-hidden sticky top-6 text-white border border-slate-700">
+            {/* Dekorasi Abstract */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-emerald-500/10 blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-56 h-56 rounded-full bg-blue-500/10 blur-3xl"></div>
+            
+            <div className="relative p-6 px-7">
+              <h3 className="text-lg font-medium text-slate-300 mb-6 flex items-center">
+                <Wallet className="w-5 h-5 mr-2 text-secondary" />
+                Ringkasan Pembiayaan
+              </h3>
+
+              <div className="space-y-5">
+                <div className="flex justify-between items-end border-b border-slate-700/50 pb-3">
+                  <span className="text-slate-400 text-sm">Pokok Pembiayaan</span>
+                  <span className="font-medium">{formatRupiah(pokokPembiayaan)}</span>
+                </div>
+                
+                <div className="flex justify-between items-end border-b border-slate-700/50 pb-3">
+                  <div>
+                    <span className="block text-slate-400 text-sm">Total Margin</span>
+                    <span className="text-xs text-slate-500">{(formData.margin)}% p.a</span>
+                  </div>
+                  <span className="font-medium text-secondary">{formatRupiah(totalMargin)}</span>
+                </div>
+
+                <div className="flex justify-between items-end border-b border-slate-700/50 pb-3 pt-2">
+                  <span className="text-slate-300 font-medium">Total Harga Jual (Pokok + Margin)</span>
+                  <span className="font-semibold text-lg">{formatRupiah(totalPembiayaan)}</span>
+                </div>
+
+                <div className="pt-4 mt-6 bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                  <span className="block text-sm text-slate-400 mb-1 text-center font-medium uppercase tracking-wider">Estimasi Cicilan per Bulan</span>
+                  <div className="text-center mt-2">
+                    <span className="text-4xl font-bold tracking-tight text-white">{formatRupiah(cicilanPerBulan)}</span>
+                    <span className="text-slate-400 text-sm ml-1 line-through hidden">/bln</span>
+                  </div>
+                  <div className="mt-4 flex justify-between text-xs text-slate-400">
+                    <span>Selama {formData.tenor} bulan</span>
+                    <span>Angsuran Tetap</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button className="flex-1 bg-primary hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98]">
+                  Simpan Simulasi
+                </button>
+                <button className="px-4 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white rounded-xl font-medium transition-all active:scale-[0.98]">
+                  Cetak PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
