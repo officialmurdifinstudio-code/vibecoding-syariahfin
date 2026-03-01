@@ -7,62 +7,12 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-// Dummy data
-const TAGIHAN_DUMMY = [
-  {
-    id: 'TG-1001',
-    namaNasabah: 'Budi Santoso',
-    namaBarang: 'Honda Vario 160',
-    cicilanKe: 8,
-    sisaTenor: 4,
-    nominal: 1250000,
-    tanggalJatuhTempo: new Date('2026-03-05'),
-    status: 'warning', // warning (h-3), danger (lewat), safe (masih jauh)
-  },
-  {
-    id: 'TG-1002',
-    namaNasabah: 'Siti Aminah',
-    namaBarang: 'iPhone 15 Pro',
-    cicilanKe: 2,
-    sisaTenor: 10,
-    nominal: 1850000,
-    tanggalJatuhTempo: new Date('2026-03-01'), // Hari ini/lewat
-    status: 'danger',
-  },
-  {
-    id: 'TG-1003',
-    namaNasabah: 'Ahmad Faisal',
-    namaBarang: 'Renovasi Atap Rumah',
-    cicilanKe: 15,
-    sisaTenor: 9,
-    nominal: 850000,
-    tanggalJatuhTempo: new Date('2026-03-15'),
-    status: 'safe',
-  },
-  {
-    id: 'TG-1004',
-    namaNasabah: 'Rina Wijaya',
-    namaBarang: 'Modal Usaha Catering',
-    cicilanKe: 5,
-    sisaTenor: 1,
-    nominal: 2500000,
-    tanggalJatuhTempo: new Date('2026-03-04'),
-    status: 'warning',
-  },
-  {
-    id: 'TG-1005',
-    namaNasabah: 'Hendra Gunawan',
-    namaBarang: 'MacBook Air M2',
-    cicilanKe: 12,
-    sisaTenor: 0,
-    nominal: 1100000,
-    tanggalJatuhTempo: new Date('2026-02-25'),
-    status: 'danger',
-  }
-];
+import { useEffect } from 'react';
+import { tagihanService } from '../services/firebaseServices';
 
 export default function ReminderTagihan() {
-  const [tagihan] = useState(TAGIHAN_DUMMY);
+  const [tagihan, setTagihan] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -74,13 +24,33 @@ export default function ReminderTagihan() {
     }).format(number);
   };
 
-  const formatDate = (date) => {
+  const formatDate = (dateValue) => {
+    // Handle Firebase Timestamp or JS Date
+    const date = dateValue?.toDate ? dateValue.toDate() : new Date(dateValue);
+    if(isNaN(date)) return '-';
+    
     return new Intl.DateTimeFormat('id-ID', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
     }).format(date);
   };
+
+  useEffect(() => {
+    const fetchTagihan = async () => {
+      setIsLoading(true);
+      // Asumsi role 'admin' sementara
+      const response = await tagihanService.getDaftarTagihan('admin');
+      if (response.success) {
+        setTagihan(response.data);
+      } else {
+        console.error("Gagal mengambil data tagihan");
+      }
+      setIsLoading(false);
+    };
+
+    fetchTagihan();
+  }, []);
 
   // Logic filter & search
   const filteredTagihan = tagihan.filter((item) => {
@@ -177,7 +147,12 @@ export default function ReminderTagihan() {
 
         {/* Table Body */}
         <div className="flex-1 overflow-y-auto p-4 md:p-0 space-y-4 md:space-y-0">
-          {filteredTagihan.length > 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+              <div className="w-10 h-10 border-4 border-slate-200 border-t-primary rounded-full animate-spin mb-4"></div>
+              <p className="text-sm text-slate-500">Memuat data dari Firebase...</p>
+            </div>
+          ) : filteredTagihan.length > 0 ? (
             filteredTagihan.map((item) => (
               <div 
                 key={item.id} 

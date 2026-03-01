@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Target, Wallet2, Calendar, TrendingUp, AlertCircle, ArrowRight, PlaneTakeoff } from 'lucide-react';
+import { Target, Wallet2, Calendar, TrendingUp, AlertCircle, ArrowRight, PlaneTakeoff, Loader2, CheckCircle2 } from 'lucide-react';
+import { tabunganUmrohService } from '../services/firebaseServices';
 
 export default function TabunganUmroh() {
   const [formData, setFormData] = useState({
@@ -7,6 +8,8 @@ export default function TabunganUmroh() {
     saldoSaatIni: '',
     targetBulan: 12,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Format angka ke format Rupiah
   const formatRupiah = (number) => {
@@ -29,6 +32,42 @@ export default function TabunganUmroh() {
       });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleSimpanRencana = async () => {
+    if(target <= 0) {
+      alert("Mohon isi target dana umroh Anda.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const dataToSave = {
+      targetDana: target,
+      saldoSaatIni: saldo,
+      targetBulan: bulan,
+      kekeurangan,
+      tabunganPerBulan,
+      persentase,
+      // userId: "USER_ID", // TODO: Implement Auth
+    };
+
+    const res = await tabunganUmrohService.buatRencanaTabungan(dataToSave);
+    setIsSubmitting(false);
+
+    if(res.success) {
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 3000);
+      
+      // Reset form
+      setFormData({
+        targetDana: '',
+        saldoSaatIni: '',
+        targetBulan: 12,
+      });
+    } else {
+      alert("Gagal menyimpan rencana: " + res.error);
     }
   };
 
@@ -198,8 +237,18 @@ export default function TabunganUmroh() {
               Jika Anda menyisihkan sebesar nilai di atas setiap bulannya, target {formatRupiah(target)} Anda akan tercapai tepat pada waktu {bulan} bulan lagi.
             </p>
 
-            <button className="w-full bg-white text-emerald-700 font-semibold py-3 px-4 rounded-xl flex items-center justify-center transition-transform hover:scale-[1.02] active:scale-95 shadow-sm">
-              Buat Jadwal Autodebet <ArrowRight className="w-4 h-4 ml-2" />
+            <button 
+              onClick={handleSimpanRencana}
+              disabled={isSubmitting || submitSuccess}
+              className="w-full bg-white text-emerald-700 font-semibold py-3 px-4 rounded-xl flex items-center justify-center transition-transform hover:scale-[1.02] active:scale-95 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin text-emerald-700" /> Memproses...</>
+              ) : submitSuccess ? (
+                <><CheckCircle2 className="w-5 h-5 mr-2 text-emerald-700" /> Berhasil Disimpan!</>
+              ) : (
+                <>Buat Rencana Autodebet <ArrowRight className="w-4 h-4 ml-2" /></>
+              )}
             </button>
           </div>
           

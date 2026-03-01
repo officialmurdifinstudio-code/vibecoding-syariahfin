@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Calculator, Package, Wallet, Info } from 'lucide-react';
+import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2 } from 'lucide-react';
+import { simulasiService } from '../services/firebaseServices';
+
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
 export default function SimulasiPembiayaan() {
@@ -10,6 +12,8 @@ export default function SimulasiPembiayaan() {
     margin: 10,
     tenor: 12,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Format angka ke format Rupiah
   const formatRupiah = (number) => {
@@ -49,6 +53,47 @@ export default function SimulasiPembiayaan() {
       });
     } else {
       setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleSimpan = async () => {
+    if(!formData.namaBarang || !formData.hargaBarang) {
+      alert("Harap lengkapi nama dan harga barang!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const dataToSave = {
+      namaBarang: formData.namaBarang,
+      hargaBarang: harga,
+      uangMuka: dp,
+      tenor: formData.tenor,
+      marginRate: formData.margin,
+      pokokPembiayaan,
+      totalMargin,
+      totalPembiayaan,
+      cicilanPerBulan,
+      // userId: "USER_ID", // TODO: Integrate real auth logic here
+    };
+
+    const res = await simulasiService.simpanSimulasi(dataToSave);
+    setIsSubmitting(false);
+
+    if(res.success) {
+      setSubmitSuccess(true);
+      setTimeout(() => setSubmitSuccess(false), 3000);
+      
+      // Reset form
+      setFormData({
+        namaBarang: '',
+        hargaBarang: '',
+        uangMuka: '',
+        margin: 10,
+        tenor: 12,
+      });
+    } else {
+      alert("Gagal menyimpan data: " + res.error);
     }
   };
 
@@ -217,8 +262,18 @@ export default function SimulasiPembiayaan() {
               </div>
 
               <div className="mt-8 flex gap-3">
-                <button className="flex-1 bg-primary hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98]">
-                  Simpan Simulasi
+                <button 
+                  onClick={handleSimpan}
+                  disabled={isSubmitting || submitSuccess}
+                  className="flex-1 bg-primary hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Menyimpan...</>
+                  ) : submitSuccess ? (
+                    <><CheckCircle2 className="w-5 h-5 mr-2" /> Tersimpan!</>
+                  ) : (
+                    "Simpan Simulasi"
+                  )}
                 </button>
                 <button className="px-4 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white rounded-xl font-medium transition-all active:scale-[0.98]">
                   Cetak PDF
