@@ -87,7 +87,9 @@ export const authService = {
           email: user.email,
           namaLengkap: userData.namaLengkap,
           role: userData.role,
-          menus: userData.menus || [] // Ambil menu-menu atau reset
+          menus: userData.menus || [], // Ambil menu-menu atau reset
+          noWhatsapp: userData.noWhatsapp || '',
+          alamat: userData.alamat || ''
         };
         // Simpan ke localstorage
         localStorage.setItem('syariahfin_user', JSON.stringify(sessionData));
@@ -127,6 +129,24 @@ export const authService = {
       return { success: true };
     } catch (error) {
       console.error("Error updating user:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Nasabah/Admin: Update Profile Setting (Nama, Alamat, No WA, Password)
+  updateUserProfile: async (userId, dataUpdate) => {
+    try {
+      // 1. Update ke Firestore (tabel user)
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        namaLengkap: dataUpdate.namaLengkap,
+        noWhatsapp: dataUpdate.noWhatsapp,
+        alamat: dataUpdate.alamat
+      });
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating profile:", error);
       return { success: false, error: error.message };
     }
   },

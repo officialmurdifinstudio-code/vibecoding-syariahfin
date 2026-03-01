@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Save, User, Mail, Lock, Phone, MapPin } from 'lucide-react';
+import { Save, User, Mail, Lock, Phone, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
+import { authService } from '../services/firebaseServices';
+import { auth } from '../services/firebaseConfig';
+import { updatePassword } from 'firebase/auth';
 
 export default function Settings() {
   const [formData, setFormData] = useState(() => {
@@ -18,6 +21,9 @@ export default function Settings() {
     };
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -26,10 +32,55 @@ export default function Settings() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulasi penyimpanan
-    alert('Pengaturan berhasil disimpan!');
+    setIsSubmitting(true);
+    setSuccessMessage('');
+
+    try {
+      // 1. Ambil session user saat ini untuk identifikasi UserId (uid)
+      const localUser = localStorage.getItem('syariahfin_user');
+      if (!localUser) throw new Error("Sesi pengguna tidak ditemukan.");
+      const sessionUser = JSON.parse(localUser);
+
+      // 2. Jika password diisi, update password auth Firebase
+      if (formData.password) {
+        if (formData.password.length < 6) {
+          throw new Error("Password baru harus lebih dari 6 karakter.");
+        }
+        if (auth.currentUser) {
+          await updatePassword(auth.currentUser, formData.password);
+        } else {
+          throw new Error("Anda harus login ulang untuk mengubah password keamanan.");
+        }
+      }
+
+      // 3. Update tabel pengguna di Firestore
+      const res = await authService.updateUserProfile(sessionUser.uid, {
+        namaLengkap: formData.username,
+        noWhatsapp: formData.phone,
+        alamat: formData.address
+      });
+
+      if (!res.success) throw new Error(res.error);
+
+      // 4. Update data session lokal agar nama dan info di header terupdate
+      sessionUser.namaLengkap = formData.username;
+      sessionUser.noWhatsapp = formData.phone;
+      sessionUser.alamat = formData.address;
+      localStorage.setItem('syariahfin_user', JSON.stringify(sessionUser));
+
+      setFormData(prev => ({ ...prev, password: '' })); // Kosongkan password setelah sukses
+      setSuccessMessage("Pengaturan akun berhasil disimpan!");
+      
+      // Sembunyikan pesan sukses setelah 3 detik
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+    } catch (error) {
+      alert("Gagal menyimpan profil: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -136,13 +187,26 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center">
+            <div className="w-full sm:w-auto mb-4 sm:mb-0">
+               {successMessage && (
+                 <div className="flex items-center text-sm text-emerald-600 bg-emerald-50 px-4 py-2 rounded-lg animate-in fade-in">
+                   <CheckCircle2 className="w-4 h-4 mr-2 shrink-0" />
+                   {successMessage}
+                 </div>
+               )}
+            </div>
+            
             <button
               type="submit"
-              className="bg-primary hover:bg-emerald-700 text-white font-medium py-2.5 px-6 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto bg-primary hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-medium py-2.5 px-6 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center justify-center min-w-[180px]"
             >
-              <Save className="w-4 h-4 mr-2" />
-              Simpan Perubahan
+              {isSubmitting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menyimpan...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" /> Simpan Perubahan</>
+              )}
             </button>
           </div>
         </form>
