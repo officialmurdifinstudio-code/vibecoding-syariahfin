@@ -116,12 +116,31 @@ export default function PortalAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: logic tambah pengguna baru manual dan edit menu
-    // Untuk saat ini kita handle local state karena form ini kompleks
     if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? { ...formData, id: u.id } : u));
+      const dataUpdate = {
+        namaLengkap: formData.name,
+        email: formData.email,
+        role: formData.role,
+        is_active: formData.status === 'active',
+        menus: formData.menus
+      };
+      
+      const res = await authService.updateUserRoleStatus(editingUser.id, dataUpdate);
+      
+      if (res.success) {
+        setUsers(users.map(u => u.id === editingUser.id ? { 
+          ...u, 
+          name: formData.name, 
+          email: formData.email, 
+          role: formData.role, 
+          status: formData.status, 
+          menus: formData.menus 
+        } : u));
+      } else {
+        alert("Gagal mengubah pengguna: " + res.error);
+      }
     } else {
-      setUsers([...users, { ...formData, id: Date.now().toString() }]);
+      alert("Fitur tambah Admin manual segera hadir. Tambah pengguna lokal harap melalui laman /register.");
     }
     handleCloseModal();
   };

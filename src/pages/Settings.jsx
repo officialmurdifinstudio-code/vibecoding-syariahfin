@@ -2,12 +2,20 @@ import { useState } from 'react';
 import { Save, User, Mail, Lock, Phone, MapPin } from 'lucide-react';
 
 export default function Settings() {
-  const [formData, setFormData] = useState({
-    username: 'adminsyariah',
-    email: 'admin@syariahfin.com',
-    password: '',
-    phone: '081234567890',
-    address: 'Jl. Merdeka No. 123, Jakarta Selatan'
+  const [formData, setFormData] = useState(() => {
+    const localUser = localStorage.getItem('syariahfin_user');
+    let user = null;
+    if (localUser) {
+      user = JSON.parse(localUser);
+    }
+    
+    return {
+      username: user ? (user.namaLengkap || 'Tanpa Nama') : '',
+      email: user ? (user.email || '') : '',
+      password: '',
+      phone: user ? (user.noWhatsapp || '') : '',
+      address: user ? (user.alamat || '') : ''
+    };
   });
 
   const handleChange = (e) => {
