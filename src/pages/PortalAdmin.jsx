@@ -17,25 +17,24 @@ export default function PortalAdmin() {
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await authService.getUsers();
+      if (res.success) {
+        const formatted = res.data.map(u => ({
+          id: u.id,
+          name: u.namaLengkap || 'Tanpa Nama',
+          email: u.email,
+          role: u.role || 'nasabah',
+          status: u.is_active ? 'active' : 'pending',
+          menus: u.menus || []
+        }));
+        setUsers(formatted);
+      }
+      setIsLoading(false);
+    };
+
     fetchUsers();
   }, []);
-
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    const res = await authService.getUsers();
-    if (res.success) {
-      const formatted = res.data.map(u => ({
-        id: u.id,
-        name: u.namaLengkap || 'Tanpa Nama',
-        email: u.email,
-        role: u.role || 'nasabah',
-        status: u.is_active ? 'active' : 'pending',
-        menus: u.menus || []
-      }));
-      setUsers(formatted);
-    }
-    setIsLoading(false);
-  };
 
   const [formData, setFormData] = useState({
     name: '',
