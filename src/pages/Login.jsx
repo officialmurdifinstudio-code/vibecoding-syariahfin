@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Leaf, Mail, Lock, Eye, EyeOff, Info } from 'lucide-react';
+import { Leaf, Mail, Lock, Eye, EyeOff, Info, Loader2 } from 'lucide-react';
+import { authService } from '../services/firebaseServices';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Login() {
   // Derived state dari router location (Menghindar dari useEffect setter)
   const showInactivateWarning = Boolean(location.state?.registered);
   
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -19,12 +21,18 @@ export default function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Di tahap 5 ini akan diganti dengan Firebase Auth
-    // Mock login sedehana: Pindah ke dashboard setelah disubmit
     if (formData.email && formData.password) {
-      navigate('/');
+      setIsSubmitting(true);
+      const res = await authService.loginUser(formData.email, formData.password);
+      setIsSubmitting(false);
+
+      if (res.success) {
+        navigate('/');
+      } else {
+        alert(res.error);
+      }
     }
   };
 
@@ -103,9 +111,10 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full flex justify-center py-3 mt-8 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 text-sm font-semibold text-white bg-primary hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98]"
+              disabled={isSubmitting}
+              className="w-full flex justify-center py-3 mt-8 px-4 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 text-sm font-semibold text-white bg-primary hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Masuk
+              {isSubmitting ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Memproses...</> : "Masuk"}
             </button>
             
           </form>

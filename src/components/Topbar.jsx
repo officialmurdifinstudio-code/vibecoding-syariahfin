@@ -1,9 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bell, UserCircle, Search, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../services/firebaseConfig';
+import { signOut } from 'firebase/auth';
 
 export default function Topbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // Ambil state awal dari lokal storage jika ada
+  const [user] = useState(() => {
+    const localUser = localStorage.getItem('syariahfin_user');
+    return localUser ? JSON.parse(localUser) : null;
+  });
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -14,13 +23,20 @@ export default function Topbar() {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsDropdownOpen(false);
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout error", error);
+    }
+    localStorage.removeItem('syariahfin_user');
     navigate('/login');
   };
 
@@ -51,8 +67,12 @@ export default function Topbar() {
             className="flex items-center space-x-3 border-l border-slate-200 pl-5 focus:outline-none"
           >
             <div className="text-right hidden md:block">
-              <p className="text-sm font-semibold text-slate-800 leading-none mb-1">Admin Syariah</p>
-              <p className="text-xs text-slate-500 leading-none">Branch Manager</p>
+              <p className="text-sm font-semibold text-slate-800 leading-none mb-1">
+                {user?.namaLengkap || 'Tanpa Nama'}
+              </p>
+              <p className="text-xs text-slate-500 leading-none capitalize">
+                {user?.role || 'Guest'}
+              </p>
             </div>
             <UserCircle className="w-9 h-9 text-slate-300 hover:text-primary transition-colors cursor-pointer" strokeWidth={1} />
           </button>

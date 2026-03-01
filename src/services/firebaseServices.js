@@ -2,7 +2,8 @@ import {
   collection, 
   addDoc, 
   getDocs, 
-  doc, 
+  doc,
+  getDoc,
   updateDoc, 
   query, 
   where,
@@ -11,7 +12,7 @@ import {
   deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from './firebaseConfig';
 
 // ==========================================
@@ -51,6 +52,55 @@ export const authService = {
         errorMessage = "Email ini sudah terdaftar.";
       } else if (error.code === 'auth/weak-password') {
         errorMessage = "Password terlalu lemah (minimal 6 karakter).";
+      }
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  // Login Pengguna
+  loginUser: async (email, password) => {
+    try {
+      // 1. Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // 2. Ambil data user dari Firestore untuk mendapatkan role & is_active
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const userData = userDocSnap.data();
+        
+        // Cek apakah akun aktif (Khusus Nasabah)
+        if (userData.role === 'nasabah' && !userData.is_active) {
+          // Secara teknis mereka berhasil login di auth, 
+          // tapi kita tolak masuk dasbor karena belum diverifikasi
+          return { 
+            success: false, 
+            error: "Akun Nasabah Anda masih berstatus PENDING. Silakan menunggu persetujuan Admin." 
+          };
+        }
+
+        // Susun session lokal
+        const sessionData = {
+          uid: user.uid,
+          email: user.email,
+          namaLengkap: userData.namaLengkap,
+          role: userData.role,
+          menus: userData.menus || [] // Ambil menu-menu atau reset
+        };
+        // Simpan ke localstorage
+        localStorage.setItem('syariahfin_user', JSON.stringify(sessionData));
+
+        return { success: true, user: sessionData };
+      } else {
+        return { success: false, error: "Data profil pengguna tidak ditemukan di server." };
+      }
+    } catch (error) {
+      console.error("Error login:", error);
+      let errorMessage = "Kombinasi email dan password salah.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        errorMessage = "Email atau password yang Anda masukkan salah.";
       }
       return { success: false, error: errorMessage };
     }
