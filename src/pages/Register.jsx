@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Leaf, Mail, Lock, Eye, EyeOff, User, MapPin, CalendarDays, Phone, Loader2, CheckCircle2 } from 'lucide-react';
+import { authService } from '../services/firebaseServices';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -30,20 +31,21 @@ export default function Register() {
     
     setIsSubmitting(true);
     
-    // Simulasi proses registrasi ke Firebase (Mock)
-    // Di sini nantinya Role akan otomatis di-set sebagai "nasabah" 
-    // dan status "is_active" akan bernilai false
-    
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulasi loading
-    
+    // Pendaftaran ke Firebase + Firestore
+    const res = await authService.registerUser(formData);
     setIsSubmitting(false);
-    setShowSuccessMessage(true);
-    
-    // Tahan sebentar untuk menampilkan pesan sukses, lalu arahkan ke Login
-    setTimeout(() => {
-      // Kita passing state melalui navigate untuk ditangkap di halaman login
-      navigate('/login', { state: { registered: true } });
-    }, 4000);
+
+    if (res.success) {
+      setShowSuccessMessage(true);
+      
+      // Tahan sebentar untuk menampilkan pesan sukses, lalu arahkan ke Login
+      setTimeout(() => {
+        // Kita passing state melalui navigate untuk ditangkap di halaman login
+        navigate('/login', { state: { registered: true } });
+      }, 4000);
+    } else {
+      alert(res.error);
+    }
   };
 
   return (

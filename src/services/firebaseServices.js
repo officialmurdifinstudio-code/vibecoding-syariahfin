@@ -6,9 +6,55 @@ import {
   updateDoc, 
   query, 
   where,
-  orderBy
+  orderBy,
+  setDoc,
+  serverTimestamp
 } from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from './firebaseConfig';
+
+// ==========================================
+// LAYANAN AUTENTIKASI DAN USER
+// ==========================================
+
+export const authService = {
+  // Register Nasabah baru
+  registerUser: async (userData) => {
+    try {
+      // 1. Buat akun di Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        userData.email, 
+        userData.password
+      );
+      const user = userCredential.user;
+
+      // 2. Simpan detail profil ke Firestore database
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        namaLengkap: userData.namaLengkap,
+        tempatTanggalLahir: userData.tempatTanggalLahir,
+        alamat: userData.alamat,
+        noWhatsapp: userData.noWhatsapp,
+        email: userData.email,
+        role: 'nasabah', // Hardcode role default
+        is_active: false, // Menunggu persetujuan admin
+        createdAt: serverTimestamp(),
+      });
+
+      return { success: true, user };
+    } catch (error) {
+      console.error("Error pendaftaran:", error);
+      let errorMessage = "Gagal mendaftar. Silakan coba lagi.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Email ini sudah terdaftar.";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Password terlalu lemah (minimal 6 karakter).";
+      }
+      return { success: false, error: errorMessage };
+    }
+  }
+};
 
 // ==========================================
 // LAYANAN SIMULASI PEMBIAYAAN
