@@ -8,6 +8,7 @@ import {
   where,
   orderBy,
   setDoc,
+  deleteDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -52,6 +53,44 @@ export const authService = {
         errorMessage = "Password terlalu lemah (minimal 6 karakter).";
       }
       return { success: false, error: errorMessage };
+    }
+  },
+
+  // Mengambil daftar pengguna untuk halaman Admin
+  getUsers: async () => {
+    try {
+      const q = query(collection(db, 'users'), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error getting users:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Admin: Update role atau status user (dan approval)
+  updateUserRoleStatus: async (userId, dataUpdate) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, dataUpdate);
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating user:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Admin: Hapus user dari Firestore
+  // Note: Menghapus dari 'users' tidak otomatis menghapus dari Firebase Auth
+  // Penghapusan Auth idealnya pakai Firebase Admin SDK di backend.
+  deleteUser: async (userId) => {
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      return { success: false, error: error.message };
     }
   }
 };

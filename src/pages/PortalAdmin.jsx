@@ -1,50 +1,6 @@
-import { useState } from 'react';
-import { Users, UserPlus, Search, Edit2, Trash2, CheckCircle, Ban, Clock, Shield, CheckSquare, Square, X } from 'lucide-react';
-
-// Mock data
-const initialUsers = [
-  {
-    id: 1,
-    name: 'Ahmad Syauqi',
-    email: 'ahmad@example.com',
-    role: 'nasabah', // nasabah, admin, pengurus
-    status: 'active', // active, pending, banned
-    menus: ['dashboard', 'simulasi', 'umroh']
-  },
-  {
-    id: 2,
-    name: 'Budi Santoso',
-    email: 'budi@syariahfin.com',
-    role: 'pengurus',
-    status: 'active',
-    menus: ['dashboard', 'simulasi', 'umroh', 'reminder']
-  },
-  {
-    id: 3,
-    name: 'Admin Utama',
-    email: 'admin@syariahfin.com',
-    role: 'admin',
-    status: 'active',
-    menus: ['dashboard', 'simulasi', 'umroh', 'reminder', 'portal_admin']
-  },
-  {
-    id: 4,
-    name: 'Danu Pratama',
-    email: 'danu@example.com',
-    role: 'nasabah',
-    status: 'pending',
-    menus: ['dashboard']
-  },
-  {
-    id: 5,
-    name: 'Eka Wijaya',
-    email: 'eka@example.com',
-    role: 'nasabah',
-    status: 'banned',
-    menus: []
-  }
-];
-
+import { useState, useEffect } from 'react';
+import { Users, UserPlus, Search, Edit2, Trash2, CheckCircle, Ban, Clock, Shield, CheckSquare, Square, X, Loader2 } from 'lucide-react';
+import { authService } from '../services/firebaseServices';
 const availableMenus = [
   { id: 'dashboard', name: 'Dashboard' },
   { id: 'simulasi', name: 'Simulasi Pembiayaan' },
@@ -54,10 +10,32 @@ const availableMenus = [
 ];
 
 export default function PortalAdmin() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    const res = await authService.getUsers();
+    if (res.success) {
+      const formatted = res.data.map(u => ({
+        id: u.id,
+        name: u.namaLengkap || 'Tanpa Nama',
+        email: u.email,
+        role: u.role || 'nasabah',
+        status: u.is_active ? 'active' : 'pending',
+        menus: u.menus || []
+      }));
+      setUsers(formatted);
+    }
+    setIsLoading(false);
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -137,28 +115,42 @@ export default function PortalAdmin() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    // TODO: logic tambah pengguna baru manual dan edit menu
+    // Untuk saat ini kita handle local state karena form ini kompleks
     if (editingUser) {
       setUsers(users.map(u => u.id === editingUser.id ? { ...formData, id: u.id } : u));
     } else {
-      setUsers([...users, { ...formData, id: Date.now() }]);
+      setUsers([...users, { ...formData, id: Date.now().toString() }]);
     }
     handleCloseModal();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) {
-      setUsers(users.filter(u => u.id !== id));
+      const res = await authService.deleteUser(id);
+      if (res.success) {
+        setUsers(users.filter(u => u.id !== id));
+      } else {
+        alert("Gagal menghapus: " + res.error);
+      }
     }
   };
 
-  const handleStatusChange = (id, newStatus) => {
-    setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+  const handleStatusChange = async (id, newStatus) => {
+    const is_active = newStatus === 'active';
+    const res = await authService.updateUserRoleStatus(id, { is_active });
+    if (res.success) {
+      setUsers(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+    }
   };
   
-  const handleRoleChange = (id, newRole) => {
-    setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
+  const handleRoleChange = async (id, newRole) => {
+    const res = await authService.updateUserRoleStatus(id, { role: newRole });
+    if (res.success) {
+      setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
+    }
   };
 
   return (
@@ -210,7 +202,14 @@ export default function PortalAdmin() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredUsers.length > 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 text-sm">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-3" />
+                    Memuat data pengguna...
+                  </td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
