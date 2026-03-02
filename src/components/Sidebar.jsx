@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Calculator, Wallet, Bell, Leaf, Users } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -8,14 +9,27 @@ function cn(...inputs) {
 }
 
 const menuItems = [
-  { name: 'Dashboard', path: '/', icon: Home },
-  { name: 'Simulasi Pembiayaan', path: '/simulasi', icon: Calculator },
-  { name: 'Tabungan Umroh', path: '/umroh', icon: Wallet },
-  { name: 'Reminder Tagihan', path: '/reminder', icon: Bell },
-  { name: 'Portal Admin', path: '/portal-admin', icon: Users },
+  { id: 'dashboard', name: 'Dashboard', path: '/', icon: Home },
+  { id: 'simulasi', name: 'Simulasi Pembiayaan', path: '/simulasi', icon: Calculator },
+  { id: 'umroh', name: 'Tabungan Umroh', path: '/umroh', icon: Wallet },
+  { id: 'reminder', name: 'Reminder Tagihan', path: '/reminder', icon: Bell },
+  { id: 'portal_admin', name: 'Portal Admin', path: '/portal-admin', icon: Users },
 ];
 
 export default function Sidebar() {
+  const [visibleMenus] = useState(() => {
+    const localUser = localStorage.getItem('syariahfin_user');
+    if (localUser) {
+      const user = JSON.parse(localUser);
+      // Admin otomatis menampilkan semua menu, role lain difilter menyesuaikan Firestore `menus` arr
+      if (user.role === 'admin') {
+        return menuItems;
+      }
+      const allowedMenuIds = user.menus || [];
+      return menuItems.filter(item => allowedMenuIds.includes(item.id));
+    }
+    return [];
+  });
   return (
     <div className="w-64 bg-white border-r border-slate-200 h-full flex flex-col">
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
@@ -23,23 +37,31 @@ export default function Sidebar() {
         <span className="text-xl font-bold text-slate-800 tracking-tight">Syariah<span className="text-primary">fin</span></span>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
-                isActive
-                  ? 'bg-emerald-50 text-primary shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-              )
-            }
-          >
-            <item.icon className="w-5 h-5 mr-3" />
-            {item.name}
-          </NavLink>
-        ))}
+        {visibleMenus.length > 0 ? (
+          visibleMenus.map((item) => (
+            <NavLink
+              key={item.id}
+              to={item.path}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                  isActive
+                    ? 'bg-emerald-50 text-primary shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                )
+              }
+            >
+              <item.icon className="w-5 h-5 mr-3" />
+              {item.name}
+            </NavLink>
+          ))
+        ) : (
+          <div className="px-4 py-6 text-center">
+            <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+              Akses menu Anda belum dikonfigurasi. Silakan hubungi Administrator.
+            </p>
+          </div>
+        )}
       </nav>
       <div className="p-4 border-t border-slate-100">
         <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
