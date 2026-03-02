@@ -14,6 +14,14 @@ export default function ReminderTagihan() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [isAdmin] = useState(() => {
+    const localSession = localStorage.getItem('syariahfin_user');
+    if (localSession) {
+      const u = JSON.parse(localSession);
+      return u.role === 'admin' || u.role === 'super_admin';
+    }
+    return false;
+  });
 
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -36,8 +44,17 @@ export default function ReminderTagihan() {
   };
 
   const fetchTagihan = async () => {
-    // Asumsi role 'admin' sementara
-    const response = await tagihanService.getDaftarTagihan('admin');
+    const localSession = localStorage.getItem('syariahfin_user');
+    let role = 'nasabah';
+    let uid = null;
+    
+    if (localSession) {
+      const u = JSON.parse(localSession);
+      role = u.role || 'nasabah';
+      uid = u.uid;
+    }
+
+    const response = await tagihanService.getDaftarTagihan(role, uid);
     if (response.success) {
       setTagihan(response.data);
     } else {
@@ -47,16 +64,7 @@ export default function ReminderTagihan() {
   };
 
   useEffect(() => {
-    const initData = async () => {
-      const response = await tagihanService.getDaftarTagihan('admin');
-      if (response.success) {
-        setTagihan(response.data);
-      } else {
-        console.error("Gagal mengambil data tagihan");
-      }
-      setIsLoading(false);
-    };
-    initData();
+    fetchTagihan();
   }, []);
 
   const handleApproval = async (id, isApproved) => {
@@ -275,7 +283,7 @@ export default function ReminderTagihan() {
 
                 {/* Action */}
                 <div className="col-span-12 md:col-span-1 flex justify-end md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 font-medium">
-                  {item.status === 'pending' ? (
+                  {item.status === 'pending' && isAdmin ? (
                     <div className="flex space-x-2">
                        <button onClick={() => handleApproval(item.id, true)} className="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 p-1.5 rounded-lg transition-colors" title="Setujui/Terima">
                          <Check className="w-4 h-4" />
@@ -284,6 +292,8 @@ export default function ReminderTagihan() {
                          <X className="w-4 h-4" />
                        </button>
                     </div>
+                  ) : item.status === 'pending' && !isAdmin ? (
+                    <span className="text-xs text-slate-400 italic">Menunggu...</span>
                   ) : (
                     <>
                       <button className="text-primary hover:text-emerald-700 text-sm flex items-center border border-primary/20 hover:bg-emerald-50 px-3 py-1.5 md:p-2 rounded-lg transition-colors">
