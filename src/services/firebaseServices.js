@@ -298,15 +298,23 @@ export const tagihanService = {
   // Ambil daftar tagihan berdasarkan role (admin lihat semua, nasabah lihat milik sendiri)
   getDaftarTagihan: async (role, userId = null) => {
     try {
-      let q = query(tagihanCollection, orderBy("tanggalJatuhTempo", "asc"));
+      let q = query(tagihanCollection);
       
       // Jika nasabah, filter hanya data mereka
       if (role === 'nasabah' && userId) {
-        q = query(tagihanCollection, where("userId", "==", userId), orderBy("tanggalJatuhTempo", "asc"));
+        q = query(tagihanCollection, where("userId", "==", userId));
       }
       
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Urutkan di JS (menghindari limitasi filter Firebase ketika ada data null/lama yang tidak memiliki field)
+      data.sort((a, b) => {
+        const dateA = a.tanggalJatuhTempo?.toDate() || a.tanggalPengajuan?.toDate() || new Date();
+        const dateB = b.tanggalJatuhTempo?.toDate() || b.tanggalPengajuan?.toDate() || new Date();
+        return dateA - dateB;
+      });
+
       return { success: true, data };
       
     } catch (error) {
@@ -321,6 +329,7 @@ export const tagihanService = {
       const docRef = await addDoc(tagihanCollection, {
         ...dataTagihan,
         tanggalPengajuan: new Date(),
+        tanggalJatuhTempo: new Date(), // Firebase mengekslusi dokumen yang tidak punya atribut pada fungsi orderBy()
         status: 'pending' // pending persetujuan admin -> berubah ke belum_dibayar setelah diapprove
       });
       return { success: true, id: docRef.id };
