@@ -364,6 +364,18 @@ export const tagihanService = {
       console.error("Error paying tagihan:", error);
       return { success: false, error: error.message };
     }
+  },
+
+  // Hapus data tagihan / ajuan pembiayaan
+  hapusTagihan: async (tagihanId) => {
+    try {
+      const tagihanRef = doc(db, 'reminder_tagihan', tagihanId);
+      await deleteDoc(tagihanRef);
+      return { success: true };
+    } catch (error) {
+      console.error("Error deleting tagihan:", error);
+      return { success: false, error: error.message };
+    }
   }
 };
 

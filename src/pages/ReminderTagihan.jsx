@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical, Check, X, Phone, FileText } from 'lucide-react';
+import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical, Check, X, Phone, FileText, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -84,6 +84,18 @@ export default function ReminderTagihan() {
         fetchTagihan();
       } else {
         alert("Gagal memperbarui status: " + res.error);
+      }
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Apakah Anda yakin ingin MENGHAPUS pengajuan pembiayaan ini selamanya? Tindakan ini tidak dapat dibatalkan.")) {
+      const res = await tagihanService.hapusTagihan(id);
+      if (res.success) {
+        setIsLoading(true);
+        fetchTagihan();
+      } else {
+        alert("Gagal menghapus data: " + res.error);
       }
     }
   };
@@ -305,8 +317,8 @@ export default function ReminderTagihan() {
                        <button onClick={() => handleApproval(item.id, true)} className="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 p-1.5 rounded-lg transition-colors" title="Setujui/Terima">
                          <Check className="w-4 h-4" />
                        </button>
-                       <button onClick={() => handleApproval(item.id, false)} className="text-red-500 hover:bg-red-50 border border-red-200 p-1.5 rounded-lg transition-colors" title="Tolak">
-                         <X className="w-4 h-4" />
+                       <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:bg-red-50 border border-red-200 p-1.5 rounded-lg transition-colors" title="Hapus Pengajuan">
+                         <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
                   ) : item.status === 'pending' && !isAdmin ? (
@@ -328,9 +340,14 @@ export default function ReminderTagihan() {
                         </button>
                       )}
                       {isAdmin && (
-                        <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
-                          <MoreVertical className="w-5 h-5"/>
-                        </button>
+                        <>
+                          <button onClick={() => handleDelete(item.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 p-2 rounded-lg transition-colors" title="Hapus Data">
+                            <Trash2 className="w-4 h-4"/>
+                          </button>
+                          <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
+                            <MoreVertical className="w-5 h-5"/>
+                          </button>
+                        </>
                       )}
                     </>
                   )}
