@@ -64,7 +64,10 @@ export default function ReminderTagihan() {
   };
 
   useEffect(() => {
-    fetchTagihan();
+    const fetchData = async () => {
+      await fetchTagihan();
+    };
+    fetchData();
   }, []);
 
   const handleApproval = async (id, isApproved) => {
