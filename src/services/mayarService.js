@@ -7,6 +7,7 @@ export const mayarService = {
       const payload = {
         name: dataTagihan.namaNasabah || dataTagihan.userName || 'Nasabah Syariahfin',
         email: dataTagihan.email || 'nasabah@syariahfin.com',
+        mobile: dataTagihan.noHp || '080000000000', // Wajib di Mayar API
         amount: dataTagihan.nominal || dataTagihan.cicilanPerBulan,
         description: `Pembayaran Cicilan: ${dataTagihan.namaBarang || dataTagihan.namaTujuan}`,
       };
@@ -26,7 +27,10 @@ export const mayarService = {
       if (res.ok && responseData.data && responseData.data.link) {
         return { success: true, link: responseData.data.link };
       } else {
-        return { success: false, error: responseData.message || "Gagal membuat Link Mayar" };
+        // Mayar seringkali mengembalikan array of object untuk validation error
+        let errorMsg = responseData.message || responseData.messages;
+        if (Array.isArray(errorMsg)) errorMsg = errorMsg.map(e => e.message || JSON.stringify(e)).join(', ');
+        return { success: false, error: errorMsg || "Gagal membuat Link Mayar" };
       }
     } catch (e) {
       console.error("Mayar API Error:", e);
