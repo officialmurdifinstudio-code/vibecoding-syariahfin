@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical } from 'lucide-react';
+import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical, Check, X, Phone } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -36,26 +36,43 @@ export default function ReminderTagihan() {
     }).format(date);
   };
 
-  useEffect(() => {
-    const fetchTagihan = async () => {
-      setIsLoading(true);
-      // Asumsi role 'admin' sementara
-      const response = await tagihanService.getDaftarTagihan('admin');
-      if (response.success) {
-        setTagihan(response.data);
-      } else {
-        console.error("Gagal mengambil data tagihan");
-      }
-      setIsLoading(false);
-    };
+  const fetchTagihan = async () => {
+    // Asumsi role 'admin' sementara
+    const response = await tagihanService.getDaftarTagihan('admin');
+    if (response.success) {
+      setTagihan(response.data);
+    } else {
+      console.error("Gagal mengambil data tagihan");
+    }
+    setIsLoading(false);
+  };
 
+  useEffect(() => {
     fetchTagihan();
   }, []);
 
+  const handleApproval = async (id, isApproved) => {
+    if (window.confirm(`Apakah Anda yakin ingin ${isApproved ? 'MENYETUJUI' : 'MENOLAK'} pengajuan pembiayaan ini?`)) {
+      // Jika disetujui, ubah status ke 'safe' / 'aktif'. 
+      // Idealnya di backend kita akan menghasilkan cicilan detail (tanggal dsb).
+      const newStatus = isApproved ? 'safe' : 'ditolak';
+      const res = await tagihanService.updateStatusTagihan(id, newStatus);
+      if (res.success) {
+        alert(`Pengajuan berhasil ${isApproved ? 'disetujui' : 'ditolak'}.`);
+        setIsLoading(true);
+        fetchTagihan();
+      } else {
+        alert("Gagal memperbarui status: " + res.error);
+      }
+    }
+  };
+
   // Logic filter & search
   const filteredTagihan = tagihan.filter((item) => {
-    const matchSearch = item.namaNasabah.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                        item.namaBarang.toLowerCase().includes(searchTerm.toLowerCase());
+    const namaCari = item.namaNasabah || item.userName || '';
+    const barangCari = item.namaBarang || item.namaTujuan || '';
+    const matchSearch = namaCari.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        barangCari.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (filterType === 'all') return matchSearch;
     return matchSearch && item.status === filterType;
@@ -75,6 +92,18 @@ export default function ReminderTagihan() {
             <Clock className="w-3.5 h-3.5 mr-1" /> H-3 Tempo
           </div>
         );
+      case 'pending':
+        return (
+          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+            <Clock className="w-3.5 h-3.5 mr-1" /> Ajuan Baru
+          </div>
+        );
+      case 'ditolak':
+        return (
+          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+            <X className="w-3.5 h-3.5 mr-1" /> Ditolak
+          </div>
+        );
       case 'safe':
       default:
         return (
@@ -87,10 +116,11 @@ export default function ReminderTagihan() {
 
   const getStatusStyle = (status) => {
     switch(status) {
+      case 'pending': return 'border-l-4 border-l-blue-400 bg-blue-50/10';
       case 'danger': return 'border-l-4 border-l-red-500 bg-red-50/30';
       case 'warning': return 'border-l-4 border-l-amber-400 bg-amber-50/30';
       case 'safe': return 'border-l-4 border-l-emerald-500';
-      default: return 'border-l-4 border-l-slate-300';
+      default: return 'border-l-4 border-l-slate-300 opacity-60';
     }
   };
 
@@ -124,6 +154,7 @@ export default function ReminderTagihan() {
               className="pl-9 pr-8 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white outline-none appearance-none cursor-pointer"
             >
               <option value="all">Semua Status</option>
+              <option value="pending">Ajuan Baru (Pending)</option>
               <option value="danger">Lewat Tempo (Merah)</option>
               <option value="warning">Mendekati H-3 (Kuning)</option>
               <option value="safe">Aman (Hijau)</option>
@@ -165,36 +196,39 @@ export default function ReminderTagihan() {
                 <div className="col-span-12 md:col-span-3 flex justify-between md:block">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-sm uppercase">
-                      {item.namaNasabah.charAt(0)}{item.namaNasabah.split(' ')[1]?.[0] || ''}
+                      {(item.namaNasabah || item.userName || 'U').charAt(0)}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-800 text-sm">{item.namaNasabah}</h4>
-                      <p className="text-xs text-slate-500">{item.id}</p>
+                      <h4 className="font-semibold text-slate-800 text-sm">{item.namaNasabah || item.userName}</h4>
+                      <p className="text-xs text-slate-500">{item.id.slice(-6)}</p>
                     </div>
                   </div>
-                  <div className="md:hidden">
+                  <div className="md:hidden mt-2">
                     {getStatusBadge(item.status)}
                   </div>
                 </div>
 
                 {/* Info Pembiayaan */}
                 <div className="col-span-12 md:col-span-3">
-                  <p className="text-sm font-medium text-slate-700">{item.namaBarang}</p>
+                  <p className="text-sm font-medium text-slate-700">{item.namaBarang || item.namaTujuan}</p>
+                  {item.status === 'pending' && <p className="text-[10px] text-slate-400">Total: {formatRupiah(item.jumlahTagihan)}</p>}
                 </div>
 
                 {/* Tenor */}
                 <div className="col-span-6 md:col-span-1 md:text-center text-sm">
-                  <p className="text-slate-500 text-xs md:hidden mb-1">Sisa Tenor</p>
+                  <p className="text-slate-500 text-xs md:hidden mb-1">Tenor</p>
                   <span className="font-medium text-slate-700">
-                    <span className="font-bold text-slate-900">{item.sisaTenor}</span> bln
+                    <span className="font-bold text-slate-900">{item.sisaTenor || item.tenor}</span> bln
                   </span>
-                  <p className="text-[10px] text-slate-400">Ke-{item.cicilanKe}</p>
+                  {item.status !== 'pending' && item.cicilanKe && (
+                    <p className="text-[10px] text-slate-400">Ke-{item.cicilanKe}</p>
+                  )}
                 </div>
 
                 {/* Nominal */}
                 <div className="col-span-6 md:col-span-2 text-right text-sm">
                   <p className="text-slate-500 text-xs md:hidden mb-1">Cicilan / Bulan</p>
-                  <p className="font-bold text-slate-800">{formatRupiah(item.nominal)}</p>
+                  <p className="font-bold text-slate-800">{formatRupiah(item.nominal || item.cicilanPerBulan)}</p>
                 </div>
 
                 {/* Tanggal & Badge */}
@@ -202,7 +236,7 @@ export default function ReminderTagihan() {
                   <div className="flex md:flex-col items-center justify-between md:justify-center mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
                     <div className="flex items-center text-sm font-medium text-slate-700">
                       <CalendarDays className="w-4 h-4 mr-2 text-slate-400 md:hidden" />
-                      {formatDate(item.tanggalJatuhTempo)}
+                      {item.status === 'pending' ? 'Tunggu Validasi' : formatDate(item.tanggalJatuhTempo || item.tanggalPengajuan)}
                     </div>
                     <div className="hidden md:block mt-1">
                       {getStatusBadge(item.status)}
@@ -212,14 +246,26 @@ export default function ReminderTagihan() {
 
                 {/* Action */}
                 <div className="col-span-12 md:col-span-1 flex justify-end md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-slate-100 font-medium">
-                  <button className="text-primary hover:text-emerald-700 text-sm flex items-center border border-primary/20 hover:bg-emerald-50 px-3 py-1.5 md:p-2 rounded-lg transition-colors">
-                    <span className="md:hidden mr-2">Hubungi via WA</span>
-                    <svg className="w-4 h-4 hidden md:block" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 0a12 12 0 1 0 12 12A12.013 12.013 0 0 0 12 0Zm-.59 18h-1.54v-5.46h-2.12v-1.42h2.12V9.8a3.14 3.14 0 0 1 3.32-3.4h1.92v1.44h-1.37c-1.13 0-1.43.53-1.43 1.37v1.92h2.8l-.37 1.42h-2.43Z"/></svg>
-                    <svg className="w-4 h-4 md:hidden" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.01 2.014c-5.513 0-9.997 4.478-9.997 9.99 0 1.765.46 3.486 1.334 5.01L2 22.013l5.127-1.344a9.927 9.927 0 0 0 4.882 1.272h.005c5.51 0 9.994-4.478 9.994-9.991C22.008 6.47 17.525 1.99 12.01 2.014Zm0 16.297a8.29 8.29 0 0 1-4.24-1.164l-.3-.178-3.15.827.842-3.072-.196-.312a8.261 8.261 0 0 1-1.265-4.41C3.702 5.378 8.16 2.9cd 11.2cd c5.51 0 9.994-4.478 9.994-9.991... Z" /></svg>
-                  </button>
-                  <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
-                    <MoreVertical className="w-5 h-5"/>
-                  </button>
+                  {item.status === 'pending' ? (
+                    <div className="flex space-x-2">
+                       <button onClick={() => handleApproval(item.id, true)} className="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 p-1.5 rounded-lg transition-colors" title="Setujui/Terima">
+                         <Check className="w-4 h-4" />
+                       </button>
+                       <button onClick={() => handleApproval(item.id, false)} className="text-red-500 hover:bg-red-50 border border-red-200 p-1.5 rounded-lg transition-colors" title="Tolak">
+                         <X className="w-4 h-4" />
+                       </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button className="text-primary hover:text-emerald-700 text-sm flex items-center border border-primary/20 hover:bg-emerald-50 px-3 py-1.5 md:p-2 rounded-lg transition-colors">
+                        <span className="md:hidden mr-2">Hubungi via WA</span>
+                        <Phone className="w-4 h-4 hidden md:block" />
+                      </button>
+                      <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
+                        <MoreVertical className="w-5 h-5"/>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))

@@ -313,6 +313,33 @@ export const tagihanService = {
       return { success: false, error: error.message };
     }
   },
+
+  // Buat tagihan / ajuan pembiayaan baru dari Simulasi
+  buatTagihanBaru: async (dataTagihan) => {
+    try {
+      const docRef = await addDoc(tagihanCollection, {
+        ...dataTagihan,
+        tanggalPengajuan: new Date(),
+        status: 'pending' // pending persetujuan admin -> berubah ke belum_dibayar setelah diapprove
+      });
+      return { success: true, id: docRef.id };
+    } catch (error) {
+      console.error("Error creating tagihan:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Admin mengubah status tagihan
+  updateStatusTagihan: async (tagihanId, statusBaru) => {
+    try {
+      const tagihanRef = doc(db, 'reminder_tagihan', tagihanId);
+      await updateDoc(tagihanRef, { status: statusBaru });
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating status tagihan:", error);
+      return { success: false, error: error.message };
+    }
+  },
   
   // Ubah status tagihan menjadi lunas
   bayarTagihan: async (tagihanId) => {

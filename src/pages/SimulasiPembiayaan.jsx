@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings } from 'lucide-react';
-import { simulasiService, systemService, authService } from '../services/firebaseServices';
+import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings, ArrowRight } from 'lucide-react';
+import { tagihanService, systemService, authService } from '../services/firebaseServices';
 
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
@@ -87,28 +87,41 @@ export default function SimulasiPembiayaan() {
     }
   };
 
-  const handleSimpan = async () => {
+  const handleLanjutkan = async () => {
     if(!formData.namaBarang || !formData.hargaBarang) {
       alert("Harap lengkapi nama dan harga barang!");
       return;
+    }
+    
+    // Ambil session userID
+    const localSession = localStorage.getItem('syariahfin_user');
+    let userId = 'anonim';
+    let userName = 'Anonim';
+    
+    if (localSession) {
+      const u = JSON.parse(localSession);
+      userId = u.uid;
+      userName = u.namaLengkap || u.email;
     }
 
     setIsSubmitting(true);
     
     const dataToSave = {
-      namaBarang: formData.namaBarang,
+      namaTujuan: formData.namaBarang,
       hargaBarang: harga,
       uangMuka: dp,
       tenor: formData.tenor,
       marginRate: formData.margin,
       pokokPembiayaan,
       totalMargin,
-      totalPembiayaan,
+      jumlahTagihan: totalPembiayaan,
       cicilanPerBulan,
-      // userId: "USER_ID", // TODO: Integrate real auth logic here
+      userId: userId,
+      userName: userName,
+      deskripsi: `Pembiayaan Murabahah: ${formData.namaBarang}`,
     };
 
-    const res = await simulasiService.simpanSimulasi(dataToSave);
+    const res = await tagihanService.buatTagihanBaru(dataToSave);
     setIsSubmitting(false);
 
     if(res.success) {
@@ -297,20 +310,17 @@ export default function SimulasiPembiayaan() {
 
               <div className="mt-8 flex gap-3">
                 <button 
-                  onClick={handleSimpan}
+                  onClick={handleLanjutkan}
                   disabled={isSubmitting || submitSuccess}
                   className="flex-1 bg-primary hover:bg-emerald-500 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
-                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Menyimpan...</>
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Sedang Memproses...</>
                   ) : submitSuccess ? (
-                    <><CheckCircle2 className="w-5 h-5 mr-2" /> Tersimpan!</>
+                    <><CheckCircle2 className="w-5 h-5 mr-2" /> Ajuan Terkirim!</>
                   ) : (
-                    "Simpan Simulasi"
+                    <><ArrowRight className="w-5 h-5 mr-2" /> Lanjutkan ke Pembelian</>
                   )}
-                </button>
-                <button className="px-4 py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white rounded-xl font-medium transition-all active:scale-[0.98]">
-                  Cetak PDF
                 </button>
               </div>
             </div>
