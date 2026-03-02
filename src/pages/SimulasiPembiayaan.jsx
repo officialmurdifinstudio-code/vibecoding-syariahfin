@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings, ArrowRight, UploadCloud, FileText, ArrowLeft, Send } from 'lucide-react';
-import { tagihanService, systemService, authService, documentService } from '../services/firebaseServices';
+import { tagihanService, systemService, authService } from '../services/firebaseServices';
 
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
@@ -135,28 +135,20 @@ export default function SimulasiPembiayaan() {
     setIsSubmitting(true);
 
     try {
-      // 1. Upload dokumen terlebih dahulu
+      // 1. Upload dokumen disimulasikan (Mode Kompetisi - Baypass Firebase Storage Limit)
       let urlKtp = '', urlSlipGaji = '', urlJaminan = '';
-      
-      const resKtp = await documentService.uploadFile(dokumen.ktp);
-      if(resKtp.success) {
-        urlKtp = resKtp.url;
-      } else {
-        setIsSubmitting(false);
-        return alert(resKtp.error);
+
+      alert("Ini hanyalah simulasi. Data dokumen KYC Anda tidak sungguhan kami upload, namun karena kelengkapan persyaratan sudah diisi, Pengajuan Anda langsung kami masukkan ke tahap pending. Tunggu persetujuan Admin.");
+
+      // Berikan URL dummy placeholder seolah upload sukses
+      urlKtp = `https://dummyimage.com/600x400/e0e7ff/4f46e5&text=${encodeURIComponent(dokumen.ktp?.name || 'KTP')}`;
+      if(dokumen.slipGaji) {
+        urlSlipGaji = `https://dummyimage.com/600x400/e0e7ff/4f46e5&text=${encodeURIComponent(dokumen.slipGaji?.name || 'Slip_Gaji')}`;
+      }
+      if(dokumen.jaminan) {
+        urlJaminan = `https://dummyimage.com/600x400/e0e7ff/4f46e5&text=${encodeURIComponent(dokumen.jaminan?.name || 'Jaminan')}`;
       }
 
-      if(dokumen.slipGaji) {
-        const resSlip = await documentService.uploadFile(dokumen.slipGaji);
-        if(resSlip.success) urlSlipGaji = resSlip.url;
-        else return alert("Gagal unggah Slip Gaji: " + resSlip.error);
-      }
-      
-      if(dokumen.jaminan) {
-        const resJam = await documentService.uploadFile(dokumen.jaminan);
-        if(resJam.success) urlJaminan = resJam.url;
-        else return alert("Gagal unggah Sertifikat/BPKB: " + resJam.error);
-      }
 
       // 2. Simpan Ajuan Tagihan
       const dataToSave = {
