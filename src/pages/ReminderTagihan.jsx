@@ -8,12 +8,14 @@ function cn(...inputs) {
 }
 
 import { tagihanService } from '../services/firebaseServices';
+import { mayarService } from '../services/mayarService';
 
 export default function ReminderTagihan() {
   const [tagihan, setTagihan] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [loadingMayarId, setLoadingMayarId] = useState(null);
   const [isAdmin] = useState(() => {
     const localSession = localStorage.getItem('syariahfin_user');
     if (localSession) {
@@ -84,6 +86,18 @@ export default function ReminderTagihan() {
         alert("Gagal memperbarui status: " + res.error);
       }
     }
+  };
+
+  const handleBayarMayar = async (item) => {
+    setLoadingMayarId(item.id);
+    const result = await mayarService.createPaymentLink(item);
+    
+    if (result.success && result.link) {
+      window.open(result.link, '_blank');
+    } else {
+      alert("Gagal mengarahkan ke halaman pembayaran Mayar: " + result.error);
+    }
+    setLoadingMayarId(null);
   };
 
   // Logic filter & search
@@ -299,13 +313,25 @@ export default function ReminderTagihan() {
                     <span className="text-xs text-slate-400 italic">Menunggu...</span>
                   ) : (
                     <>
-                      <button className="text-primary hover:text-emerald-700 text-sm flex items-center border border-primary/20 hover:bg-emerald-50 px-3 py-1.5 md:p-2 rounded-lg transition-colors">
-                        <span className="md:hidden mr-2">Hubungi via WA</span>
-                        <Phone className="w-4 h-4 hidden md:block" />
-                      </button>
-                      <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
-                        <MoreVertical className="w-5 h-5"/>
-                      </button>
+                      {!isAdmin ? (
+                        <button 
+                          onClick={() => handleBayarMayar(item)}
+                          disabled={loadingMayarId === item.id}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center shadow-lg shadow-emerald-500/20 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {loadingMayarId === item.id ? 'Memproses...' : 'Bayar via Mayar'}
+                        </button>
+                      ) : (
+                        <button className="text-primary hover:text-emerald-700 text-sm flex items-center border border-primary/20 hover:bg-emerald-50 px-3 py-1.5 md:p-2 rounded-lg transition-colors">
+                          <span className="md:hidden mr-2">Hubungi via WA</span>
+                          <Phone className="w-4 h-4 hidden md:block" />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button className="md:hidden text-slate-400 hover:bg-slate-100 p-2 rounded-lg ml-2">
+                          <MoreVertical className="w-5 h-5"/>
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
