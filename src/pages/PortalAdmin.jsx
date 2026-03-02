@@ -26,7 +26,8 @@ export default function PortalAdmin() {
           email: u.email,
           role: u.role || 'nasabah',
           status: u.is_active ? 'active' : 'pending',
-          menus: u.menus || []
+          menus: u.menus || [],
+          margin: u.margin || ''
         }));
         setUsers(formatted);
       }
@@ -41,7 +42,8 @@ export default function PortalAdmin() {
     email: '',
     role: 'nasabah',
     status: 'active',
-    menus: []
+    menus: [],
+    margin: ''
   });
 
   const getStatusBadge = (status) => {
@@ -86,7 +88,8 @@ export default function PortalAdmin() {
         email: '',
         role: 'nasabah',
         status: 'active',
-        menus: ['dashboard']
+        menus: ['dashboard'],
+        margin: ''
       });
     }
     setIsModalOpen(true);
@@ -122,7 +125,8 @@ export default function PortalAdmin() {
         email: formData.email,
         role: formData.role,
         is_active: formData.status === 'active',
-        menus: formData.menus
+        menus: formData.menus,
+        margin: formData.margin ? Number(formData.margin) : null
       };
       
       const res = await authService.updateUserRoleStatus(editingUser.id, dataUpdate);
@@ -134,7 +138,8 @@ export default function PortalAdmin() {
           email: formData.email, 
           role: formData.role, 
           status: formData.status, 
-          menus: formData.menus 
+          menus: formData.menus,
+          margin: formData.margin
         } : u));
       } else {
         alert("Gagal mengubah pengguna: " + res.error);
@@ -402,6 +407,22 @@ export default function PortalAdmin() {
                     </label>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1 border-t border-slate-100 pt-4">Margin Pembiayaan Khusus (%)</label>
+                <input
+                  type="number"
+                  name="margin"
+                  step="0.1"
+                  min="1"
+                  max="50"
+                  value={formData.margin || ''}
+                  onChange={handleFormChange}
+                  className="block w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-primary focus:border-primary transition-colors bg-white mt-1"
+                  placeholder="Kosongkan untuk ikut margin global"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">Isi hanya jika Anda ingin memberikan penetapan margin yang berbeda pada simulasi pembiayaan untuk Nasabah ini.</p>
               </div>
               
               <div className="pt-4 border-t border-slate-100 flex justify-end space-x-3">

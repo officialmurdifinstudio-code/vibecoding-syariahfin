@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
-import { simulasiService, systemService } from '../services/firebaseServices';
+import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings } from 'lucide-react';
+import { simulasiService, systemService, authService } from '../services/firebaseServices';
 
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
@@ -15,13 +15,32 @@ export default function SimulasiPembiayaan() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isLoadingMargin, setIsLoadingMargin] = useState(true);
+  const [isMarginKhusus, setIsMarginKhusus] = useState(false);
 
   useEffect(() => {
     const fetchMargin = async () => {
-      const res = await systemService.getMarginSetting();
-      if (res.success) {
-        setFormData(prev => ({ ...prev, margin: res.margin }));
+      // Prioritaskan margin pribadi pengguna jika diatur di Firestore
+      const localSession = localStorage.getItem('syariahfin_user');
+      let usedMargin = 10;
+      let isKhusus = false;
+
+      if (localSession) {
+        const user = JSON.parse(localSession);
+        const userProf = await authService.getUserProfile(user.uid);
+        if (userProf.success && userProf.data.margin) {
+          usedMargin = userProf.data.margin;
+          isKhusus = true;
+        }
       }
+
+      // Fallback ke System Setting jika user tidak punya margin khusus
+      if (!isKhusus) {
+        const sysRes = await systemService.getMarginSetting();
+        if (sysRes.success) usedMargin = sysRes.margin;
+      }
+
+      setFormData(prev => ({ ...prev, margin: usedMargin }));
+      setIsMarginKhusus(isKhusus);
       setIsLoadingMargin(false);
     };
     fetchMargin();
@@ -210,8 +229,12 @@ export default function SimulasiPembiayaan() {
                    ) : (
                      <div className="flex items-center justify-between w-full">
                        <div className="text-base font-bold">{formData.margin}% <span className="text-xs font-normal opacity-70">p.a</span></div>
-                       <div className="text-[10px] sm:text-xs text-emerald-600 font-medium flex items-center bg-white px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
-                         <Sparkles className="w-3 h-3 mr-1 text-emerald-500" /> Ditetapkan Admin
+                       <div className={`text-[10px] sm:text-xs font-medium flex items-center bg-white px-2 py-0.5 rounded-full border shadow-sm ${isMarginKhusus ? 'text-amber-600 border-amber-200' : 'text-emerald-600 border-emerald-100'}`}>
+                         {isMarginKhusus ? (
+                           <><Sparkles className="w-3 h-3 mr-1 text-amber-500" /> Ditetapkan Khusus (Personal)</>
+                         ) : (
+                           <><Settings className="w-3 h-3 mr-1 text-emerald-500" /> Ditetapkan Pusat (Default)</>
+                         )}
                        </div>
                      </div>
                    )}

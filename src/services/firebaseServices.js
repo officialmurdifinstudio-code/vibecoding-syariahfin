@@ -89,7 +89,8 @@ export const authService = {
           role: userData.role,
           menus: userData.menus || [], // Ambil menu-menu atau reset
           noWhatsapp: userData.noWhatsapp || '',
-          alamat: userData.alamat || ''
+          alamat: userData.alamat || '',
+          margin: userData.margin || null // Tambahkan margin spesifik
         };
         // Simpan ke localstorage
         localStorage.setItem('syariahfin_user', JSON.stringify(sessionData));
@@ -108,12 +109,30 @@ export const authService = {
     }
   },
 
+  getUserProfile: async (userId) => {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        return { success: true, data: userSnap.data() };
+      }
+      return { success: false, error: "User not found" };
+    } catch (error) {
+      console.error("Error getting user profile:", error);
+      return { success: false, error: error.message };
+    }
+  },
+
   // Mengambil daftar pengguna untuk halaman Admin
   getUsers: async () => {
     try {
       const q = query(collection(db, 'users'), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const data = querySnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        margin: doc.data().margin || null
+      }));
       return { success: true, data };
     } catch (error) {
       console.error("Error getting users:", error);
