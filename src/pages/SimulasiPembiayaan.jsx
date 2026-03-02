@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings, ArrowRight } from 'lucide-react';
-import { tagihanService, systemService, authService } from '../services/firebaseServices';
+import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles, Settings, ArrowRight, UploadCloud, FileText, ArrowLeft, Send } from 'lucide-react';
+import { tagihanService, systemService, authService, documentService } from '../services/firebaseServices';
 
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
@@ -87,13 +87,41 @@ export default function SimulasiPembiayaan() {
     }
   };
 
-  const handleLanjutkan = async () => {
+  const [step, setStep] = useState(1);
+  const [dokumen, setDokumen] = useState({
+    ktp: null,
+    slipGaji: null,
+    jaminan: null
+  });
+
+  const handleLanjutkan = () => {
     if(!formData.namaBarang || !formData.hargaBarang) {
       alert("Harap lengkapi nama dan harga barang!");
       return;
     }
     
-    // Ambil session userID
+    // Pastikan login terlebih dahulu sebelum bisa unggah dokumen / melanjutkan
+    const localSession = localStorage.getItem('syariahfin_user');
+    if (!localSession) {
+      alert("Anda harus Login sebagai Nasabah untuk melanjutkan ke tahap pembelian.");
+      return;
+    }
+
+    setStep(2);
+  };
+
+  const handleFileChange = (e, key) => {
+    if(e.target.files[0]) {
+      setDokumen(prev => ({ ...prev, [key]: e.target.files[0] }));
+    }
+  };
+
+  const handleKirimFinal = async () => {
+    if(!dokumen.ktp) {
+      alert("Wajib mengunggah minimal foto KTP.");
+      return;
+    }
+
     const localSession = localStorage.getItem('syariahfin_user');
     let userId = 'anonim';
     let userName = 'Anonim';
@@ -105,39 +133,66 @@ export default function SimulasiPembiayaan() {
     }
 
     setIsSubmitting(true);
-    
-    const dataToSave = {
-      namaTujuan: formData.namaBarang,
-      hargaBarang: harga,
-      uangMuka: dp,
-      tenor: formData.tenor,
-      marginRate: formData.margin,
-      pokokPembiayaan,
-      totalMargin,
-      jumlahTagihan: totalPembiayaan,
-      cicilanPerBulan,
-      userId: userId,
-      userName: userName,
-      deskripsi: `Pembiayaan Murabahah: ${formData.namaBarang}`,
-    };
 
-    const res = await tagihanService.buatTagihanBaru(dataToSave);
-    setIsSubmitting(false);
-
-    if(res.success) {
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 3000);
+    try {
+      // 1. Upload dokumen terlebih dahulu
+      let urlKtp = '', urlSlipGaji = '', urlJaminan = '';
       
-      // Reset form
-      setFormData({
-        namaBarang: '',
-        hargaBarang: '',
-        uangMuka: '',
-        margin: 10,
-        tenor: 12,
-      });
-    } else {
-      alert("Gagal menyimpan data: " + res.error);
+      const resKtp = await documentService.uploadFile(dokumen.ktp);
+      if(resKtp.success) urlKtp = resKtp.url;
+
+      if(dokumen.slipGaji) {
+        const resSlip = await documentService.uploadFile(dokumen.slipGaji);
+        if(resSlip.success) urlSlipGaji = resSlip.url;
+      }
+      
+      if(dokumen.jaminan) {
+        const resJam = await documentService.uploadFile(dokumen.jaminan);
+        if(resJam.success) urlJaminan = resJam.url;
+      }
+
+      // 2. Simpan Ajuan Tagihan
+      const dataToSave = {
+        namaTujuan: formData.namaBarang,
+        hargaBarang: harga,
+        uangMuka: dp,
+        tenor: formData.tenor,
+        marginRate: formData.margin,
+        pokokPembiayaan,
+        totalMargin,
+        jumlahTagihan: totalPembiayaan,
+        cicilanPerBulan,
+        userId: userId,
+        userName: userName,
+        deskripsi: `Pembiayaan Murabahah: ${formData.namaBarang}`,
+        fileKtp: urlKtp,
+        fileSlipGaji: urlSlipGaji,
+        fileJaminan: urlJaminan
+      };
+
+      const res = await tagihanService.buatTagihanBaru(dataToSave);
+      
+      if(res.success) {
+        setSubmitSuccess(true);
+        setTimeout(() => {
+          setSubmitSuccess(false);
+          setStep(1);
+          setDokumen({ ktp: null, slipGaji: null, jaminan: null });
+          setFormData({
+             ...formData,
+             namaBarang: '',
+             hargaBarang: '',
+             uangMuka: ''
+          });
+        }, 3000);
+      } else {
+        alert("Gagal mengirim ajuan: " + res.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan sistem saat mengunggah data.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -150,7 +205,8 @@ export default function SimulasiPembiayaan() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {step === 1 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Form Input Container */}
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-5 pb-3 border-b border-slate-100 flex items-center">
@@ -326,7 +382,82 @@ export default function SimulasiPembiayaan() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      ) : (
+        /* ================= STEP 2: UPLOAD DOKUMEN KYC ================= */
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 lg:p-10 max-w-3xl mx-auto w-full">
+           <div className="text-center mb-8 border-b border-slate-100 pb-6">
+             <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+               <UploadCloud className="w-7 h-7" />
+             </div>
+             <h2 className="text-xl font-bold text-slate-800">Unggah Dokumen Verifikasi Jaminan</h2>
+             <p className="text-slate-500 text-sm mt-2 max-w-md mx-auto">Kami memerlukan identitas legal Anda untuk memproses akad secara syariah sebelum disetujui oleh admin.</p>
+           </div>
+           
+           <div className="space-y-6">
+              {/* Field KTP (Wajib) */}
+              <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                <label className="flex items-start text-sm font-medium text-slate-800 mb-2">
+                  <span className="bg-primary/10 text-primary w-6 h-6 flex items-center justify-center rounded-full mr-2 shrink-0">1</span>
+                  Foto KTP Asli (Wajib)
+                </label>
+                <div className="mt-2 ml-8">
+                  <input type="file" accept="image/*" onChange={(e) => handleFileChange(e, 'ktp')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-emerald-700 transition" />
+                  {dokumen.ktp && <p className="text-xs text-emerald-600 mt-2 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1"/> {dokumen.ktp.name}</p>}
+                </div>
+              </div>
+
+              {/* Field Bukti Usaha (Opsional/Sangat Disarankan) */}
+              <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                <label className="flex items-start text-sm font-medium text-slate-800 mb-2">
+                  <span className="bg-blue-100 text-blue-600 w-6 h-6 flex items-center justify-center rounded-full mr-2 shrink-0">2</span>
+                  <div>
+                    Foto Slip Gaji / Bukti Usaha / NPWP
+                    <span className="block text-xs font-normal text-slate-500 mt-1">Digunakan untuk menilai kemampuan angsuran Murabahah Anda.</span>
+                  </div>
+                </label>
+                <div className="mt-2 ml-8">
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, 'slipGaji')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 transition" />
+                  {dokumen.slipGaji && <p className="text-xs text-blue-600 mt-2 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1"/> {dokumen.slipGaji.name}</p>}
+                </div>
+              </div>
+
+              {/* Field BPKB/Sertifikat (Opsional) */}
+              <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+                <label className="flex items-start text-sm font-medium text-slate-800 mb-2">
+                  <span className="bg-amber-100 text-amber-600 w-6 h-6 flex items-center justify-center rounded-full mr-2 shrink-0">3</span>
+                  <div>
+                    Pernyataan Jaminan BPKB / Sertifikat
+                    <span className="block text-xs font-normal text-slate-500 mt-1">Disarankan jika plafon pembiayaan cukup tinggi (Dapat menyusul).</span>
+                  </div>
+                </label>
+                <div className="mt-2 ml-8">
+                  <input type="file" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, 'jaminan')} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-600 file:text-white hover:file:bg-amber-700 transition" />
+                  {dokumen.jaminan && <p className="text-xs text-amber-600 mt-2 flex items-center"><CheckCircle2 className="w-3 h-3 mr-1"/> {dokumen.jaminan.name}</p>}
+                </div>
+              </div>
+           </div>
+
+           <div className="mt-10 flex flex-col-reverse sm:flex-row gap-4 justify-between items-center pt-6 border-t border-slate-100">
+             <button onClick={() => setStep(1)} type="button" className="px-5 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl transition flex items-center text-sm w-full sm:w-auto justify-center">
+               <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Simulasi
+             </button>
+             <button 
+               onClick={handleKirimFinal}
+               disabled={isSubmitting || submitSuccess} 
+               className="bg-primary hover:bg-emerald-600 text-white px-8 py-3 rounded-xl font-medium shadow-md shadow-emerald-500/20 active:scale-95 transition flex items-center text-sm w-full sm:w-auto justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+             >
+               {isSubmitting ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Sedang Mengunggah Dokumen...</>
+               ) : submitSuccess ? (
+                  <><CheckCircle2 className="w-4 h-4 mr-2"/> Ajuan Terkirim!</>
+               ) : (
+                  <><Send className="w-4 h-4 mr-2"/> Kirim Ajuan Pembiayaan</>
+               )}
+             </button>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

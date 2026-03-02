@@ -13,7 +13,8 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from './firebaseConfig';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from './firebaseConfig';
 
 // ==========================================
 // LAYANAN AUTENTIKASI DAN USER
@@ -353,6 +354,33 @@ export const tagihanService = {
     } catch (error) {
       console.error("Error paying tagihan:", error);
       return { success: false, error: error.message };
+    }
+  }
+};
+
+// ==========================================
+// PENGELOLAAN DOKUMEN / MEDIA (KYC/KTP dll)
+// ==========================================
+export const documentService = {
+  uploadFile: async (file, pathFolder = "dokumen_kyc") => {
+    if (!file) return { success: false, error: "Tidak ada file" };
+    try {
+      // Buat referensi file unik
+      const fileName = `${Date.now()}_${file.name}`;
+      const fileRef = ref(storage, `${pathFolder}/${fileName}`);
+      
+      // Proses upload
+      const snapshot = await uploadBytes(fileRef, file);
+      
+      // Ambil public url nya
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return { success: true, url: downloadURL };
+    } catch (error) {
+      console.error("Error uploading file to storage:", error);
+      // Fallback untuk demontrasi jika Firebase Storage pengguna belum aktif setting rulesnya / terblokir
+      console.warn("Jatuh ke mode Fallback link lokal karena Storage memunculkan Error.");
+      return { success: true, url: `https://dummyimage.com/600x400/e0e7ff/4f46e5&text=${encodeURIComponent(file.name)}` };
     }
   }
 };

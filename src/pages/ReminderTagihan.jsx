@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical, Check, X, Phone } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Search, Filter, AlertCircle, CheckCircle2, Clock, CalendarDays, MoreVertical, Check, X, Phone, FileText } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -7,7 +7,6 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-import { useEffect } from 'react';
 import { tagihanService } from '../services/firebaseServices';
 
 export default function ReminderTagihan() {
@@ -220,7 +219,28 @@ export default function ReminderTagihan() {
                 {/* Info Pembiayaan */}
                 <div className="col-span-12 md:col-span-3">
                   <p className="text-sm font-medium text-slate-700">{item.namaBarang || item.namaTujuan}</p>
-                  {item.status === 'pending' && <p className="text-[10px] text-slate-400">Total: {formatRupiah(item.jumlahTagihan)}</p>}
+                  {item.status === 'pending' && (
+                    <div className="mt-1">
+                      <p className="text-[10px] text-slate-400 mb-1">Total: {formatRupiah(item.jumlahTagihan)}</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {item.fileKtp && (
+                          <a href={item.fileKtp} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/20 flex items-center hover:bg-primary hover:text-white transition">
+                            <FileText className="w-3 h-3 mr-1" /> KTP
+                          </a>
+                        )}
+                        {item.fileSlipGaji && (
+                          <a href={item.fileSlipGaji} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 flex items-center hover:bg-blue-600 hover:text-white transition">
+                            <FileText className="w-3 h-3 mr-1" /> Slip
+                          </a>
+                        )}
+                        {item.fileJaminan && (
+                          <a href={item.fileJaminan} target="_blank" rel="noopener noreferrer" className="text-[10px] bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-200 flex items-center hover:bg-amber-600 hover:text-white transition">
+                            <FileText className="w-3 h-3 mr-1" /> Jaminan
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Tenor */}
