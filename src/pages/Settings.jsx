@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, User, Mail, Lock, Phone, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
-import { authService } from '../services/firebaseServices';
+import { authService, systemService } from '../services/firebaseServices';
 import { auth } from '../services/firebaseConfig';
 import { updatePassword } from 'firebase/auth';
 
@@ -17,12 +17,30 @@ export default function Settings() {
       email: user ? (user.email || '') : '',
       password: '',
       phone: user ? (user.noWhatsapp || '') : '',
-      address: user ? (user.alamat || '') : ''
+      address: user ? (user.alamat || '') : '',
+      marginSimulasi: 10
     };
   });
 
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    const localUser = localStorage.getItem('syariahfin_user');
+    if (localUser) {
+      const user = JSON.parse(localUser);
+      if (user.role === 'admin') {
+        setIsAdmin(true);
+        // Ambil pengaturan sistem khusus admin
+        systemService.getMarginSetting().then(res => {
+          if (res.success) {
+            setFormData(prev => ({ ...prev, marginSimulasi: res.margin }));
+          }
+        });
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -63,6 +81,11 @@ export default function Settings() {
       });
 
       if (!res.success) throw new Error(res.error);
+
+      // 3.5 Khusus admin, simpan kembali margin pembiayaan
+      if (isAdmin && formData.marginSimulasi) {
+         await systemService.updateMarginSetting(Number(formData.marginSimulasi));
+      }
 
       // 4. Update data session lokal agar nama dan info di header terupdate
       sessionUser.namaLengkap = formData.username;
@@ -186,6 +209,40 @@ export default function Settings() {
               </div>
             </div>
           </div>
+
+          {isAdmin && (
+            <div className="mt-8 pt-8 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-6">
+                 <div>
+                   <h3 className="text-lg font-semibold text-slate-800">Pengaturan Sistem (Khusus Admin)</h3>
+                   <p className="text-sm text-slate-500 mt-1">Konfigurasi variabel penting yang berlaku di seluruh komponen aplikasi layaknya suku bunga tabungan dan lain-lain.</p>
+                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100/50">
+                  <label className="block text-sm font-semibold text-emerald-900 mb-2">Margin Pembiayaan (Murabahah)</label>
+                  <p className="text-xs text-emerald-700/80 mb-4 h-8">Margin keuntungan yang ditetapkan Bank / Pengurus untuk setiap akad Simulasi Pembiayaan.</p>
+                  
+                  <div className="relative">
+                    <input
+                      type="number"
+                      name="marginSimulasi"
+                      min="1"
+                      max="50"
+                      step="0.5"
+                      value={formData.marginSimulasi}
+                      onChange={handleChange}
+                      className="block w-full pl-4 pr-12 py-3 border border-emerald-200 rounded-xl text-base font-medium focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-white shadow-sm"
+                    />
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                      <span className="text-emerald-600 font-bold ml-1">% p.a</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center">
             <div className="w-full sm:w-auto mb-4 sm:mb-0">

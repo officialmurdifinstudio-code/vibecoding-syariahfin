@@ -201,6 +201,33 @@ export const simulasiService = {
   }
 };
 
+// ==========================================
+// LAYANAN PENGATURAN SISTEM
+// ==========================================
+export const systemService = {
+  getMarginSetting: async () => {
+    try {
+      const docRef = doc(db, 'settings', 'pembiayaan');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().marginRate) {
+        return { success: true, margin: docSnap.data().marginRate };
+      }
+      return { success: true, margin: 10 }; // Default 10%
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+  updateMarginSetting: async (newMargin) => {
+    try {
+      const docRef = doc(db, 'settings', 'pembiayaan');
+      await setDoc(docRef, { marginRate: newMargin }, { merge: true });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+};
+
 
 // ==========================================
 // LAYANAN TABUNGAN UMROH

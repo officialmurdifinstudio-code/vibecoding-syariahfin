@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2 } from 'lucide-react';
-import { simulasiService } from '../services/firebaseServices';
+import { useState, useEffect } from 'react';
+import { Calculator, Package, Wallet, Info, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { simulasiService, systemService } from '../services/firebaseServices';
 
 const TENOR_OPTIONS = [3, 6, 9, 12, 18, 24, 36];
 
@@ -14,6 +14,18 @@ export default function SimulasiPembiayaan() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isLoadingMargin, setIsLoadingMargin] = useState(true);
+
+  useEffect(() => {
+    const fetchMargin = async () => {
+      const res = await systemService.getMarginSetting();
+      if (res.success) {
+        setFormData(prev => ({ ...prev, margin: res.margin }));
+      }
+      setIsLoadingMargin(false);
+    };
+    fetchMargin();
+  }, []);
 
   // Format angka ke format Rupiah
   const formatRupiah = (number) => {
@@ -191,19 +203,18 @@ export default function SimulasiPembiayaan() {
               <div>
                 <label className="flex text-sm font-medium text-slate-700 mb-2 justify-between">
                   <span>Margin (% per tahun)</span>
-                  <span className="text-primary font-semibold">{formData.margin}%</span>
                 </label>
-                <div className="flex items-center space-x-4 h-11">
-                  <input
-                    type="range"
-                    name="margin"
-                    min="5"
-                    max="30"
-                    step="0.5"
-                    value={formData.margin}
-                    onChange={handleInputChange}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+                <div className="bg-emerald-50 text-emerald-800 px-4 h-11 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                   {isLoadingMargin ? (
+                     <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mx-auto" />
+                   ) : (
+                     <div className="flex items-center justify-between w-full">
+                       <div className="text-base font-bold">{formData.margin}% <span className="text-xs font-normal opacity-70">p.a</span></div>
+                       <div className="text-[10px] sm:text-xs text-emerald-600 font-medium flex items-center bg-white px-2 py-0.5 rounded-full border border-emerald-100 shadow-sm">
+                         <Sparkles className="w-3 h-3 mr-1 text-emerald-500" /> Ditetapkan Admin
+                       </div>
+                     </div>
+                   )}
                 </div>
               </div>
             </div>
