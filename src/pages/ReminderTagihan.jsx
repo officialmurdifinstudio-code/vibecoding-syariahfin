@@ -48,7 +48,16 @@ export default function ReminderTagihan() {
   };
 
   useEffect(() => {
-    fetchTagihan();
+    const initData = async () => {
+      const response = await tagihanService.getDaftarTagihan('admin');
+      if (response.success) {
+        setTagihan(response.data);
+      } else {
+        console.error("Gagal mengambil data tagihan");
+      }
+      setIsLoading(false);
+    };
+    initData();
   }, []);
 
   const handleApproval = async (id, isApproved) => {
