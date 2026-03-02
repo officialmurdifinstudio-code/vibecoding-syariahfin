@@ -139,16 +139,23 @@ export default function SimulasiPembiayaan() {
       let urlKtp = '', urlSlipGaji = '', urlJaminan = '';
       
       const resKtp = await documentService.uploadFile(dokumen.ktp);
-      if(resKtp.success) urlKtp = resKtp.url;
+      if(resKtp.success) {
+        urlKtp = resKtp.url;
+      } else {
+        setIsSubmitting(false);
+        return alert(resKtp.error);
+      }
 
       if(dokumen.slipGaji) {
         const resSlip = await documentService.uploadFile(dokumen.slipGaji);
         if(resSlip.success) urlSlipGaji = resSlip.url;
+        else return alert("Gagal unggah Slip Gaji: " + resSlip.error);
       }
       
       if(dokumen.jaminan) {
         const resJam = await documentService.uploadFile(dokumen.jaminan);
         if(resJam.success) urlJaminan = resJam.url;
+        else return alert("Gagal unggah Sertifikat/BPKB: " + resJam.error);
       }
 
       // 2. Simpan Ajuan Tagihan

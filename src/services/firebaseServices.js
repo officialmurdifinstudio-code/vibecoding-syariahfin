@@ -378,9 +378,10 @@ export const documentService = {
       return { success: true, url: downloadURL };
     } catch (error) {
       console.error("Error uploading file to storage:", error);
-      // Fallback untuk demontrasi jika Firebase Storage pengguna belum aktif setting rulesnya / terblokir
-      console.warn("Jatuh ke mode Fallback link lokal karena Storage memunculkan Error.");
-      return { success: true, url: `https://dummyimage.com/600x400/e0e7ff/4f46e5&text=${encodeURIComponent(file.name)}` };
+      return { 
+        success: false, 
+        error: "Gagal unggah. Pastikan Firebase Storage Rules terbuka, atau periksa koneksi." 
+      };
     }
   }
 };
